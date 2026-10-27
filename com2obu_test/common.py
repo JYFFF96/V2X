@@ -150,7 +150,8 @@ def neutralize_previous_rsi():
     print("[RSI] previous RTE/RTS moved away from current test route")
 
 def run_rsm(json_path,reqid,ego_points,ego_speed_kmh,duration_s,update_target,repeat=1):
-    neutralize_previous_rsi()\n    base=load_json(json_path); topic=rsu_topic("rsm",reqid)
+    neutralize_previous_rsi()
+    base=load_json(json_path); topic=rsu_topic("rsm",reqid)
     obu=MQTTClient(OBU_HOST,OBU_PORT,OBU_USER,OBU_PASSWORD,"com2obu_rsm"); rsu=MQTTClient(RSU_MQTT_HOST,RSU_MQTT_PORT,client_id="rsm_scenario")
     obu.connect(); rsu.connect(); frames=route_frames(ego_points,ego_speed_kmh); max_frames=max(1,int(duration_s*SEND_HZ))
     try:
