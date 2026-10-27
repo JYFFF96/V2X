@@ -124,31 +124,49 @@ def set_participant(p,lat,lon,speed_kmh,heading,ptc_type=None):
     p["speed"]=speed_raw(speed_kmh); p["heading"]=heading_raw(heading)
 
 def neutralize_previous_rsi():
-    """Overwrite previously used RTE/RTS IDs with valid messages far away from the Wuhan test route."""
-    far_lat=399557801; far_lon=1163218301
-    rte={"type":"rte","value":{"msgCnt":0,"moy":0,"id":"clear-rte","refPos":{"lat":far_lat,"long":far_lon,"elevation":0},
-         "rtss":None,"rtes":[{"rteId":6,"eventType":43,"eventSource":5,
-         "eventPos":{"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat,"lng":far_lon,"long":far_lon}},"offsetV":None},
-         "eventRadius":None,"description":{"choiceID":2,"description":"clear"},
-         "timeDetails":{"startTime":0,"endTime":None,"endTimeConfidence":None},"priority":1,
-         "referencePaths":[{"activePath":[
-             {"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat,"lng":far_lon,"long":far_lon}},"offsetV":{"choiceID":7,"elevation":0}},
-             {"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat+1000,"lng":far_lon+1000,"long":far_lon+1000}},"offsetV":{"choiceID":7,"elevation":0}}
-         ],"pathRadius":50}],"referenceLinks":None,"eventConfidence":None,"duration":60,"alertStatus":1}]}}
-    rts={"type":"rts","value":{"msgCnt":0,"moy":0,"id":"clear-rts","refPos":{"lat":far_lat,"long":far_lon,"elevation":0},
-         "rtss":[{"rtsId":4,"signType":37,
-         "signPos":{"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat,"long":far_lon}},"offsetV":None},
-         "description":{"choiceID":2,"description":"clear"},"timeDetails":{"startTime":0,"endTime":None,"endTimeConfidence":None},
-         "priority":1,"referencePaths":[{"activePath":[
-             {"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat,"long":far_lon}},"offsetV":{"choiceID":7,"elevation":0}},
-             {"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat+1000,"long":far_lon+1000}},"offsetV":{"choiceID":7,"elevation":0}}
-         ],"pathRadius":50}],"referenceLinks":None,"duration":60,"alertStatus":1}],"rtes":None}}
-    cli=MQTTClient(RSU_MQTT_HOST,RSU_MQTT_PORT,client_id="neutralize_rsi"); cli.connect()
-    cli.publish(rsu_topic("rte","983966a4-59a2-4431-bd62-965d7ec8ee90"),dump_json(rte)); time.sleep(0.2)
-    cli.publish(rsu_topic("rts","983966a4-59a2-4431-bd62-965d7ec8ee91"),dump_json(rts)); time.sleep(0.5)
+    """Overwrite the previously used JAM/HLW RTE with a valid far-away RTE."""
+    far_lat=399557801
+    far_lon=1163218301
+    rte={
+        "type":"rte",
+        "value":{
+            "msgCnt":0,
+            "moy":90355,
+            "id":"20080026",
+            "refPos":{"lat":far_lat,"long":far_lon,"elevation":0},
+            "rtss":None,
+            "rtes":[{
+                "rteId":6,
+                "eventType":43,
+                "eventSource":5,
+                "eventPos":{
+                    "offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat,"lng":far_lon,"long":far_lon}},
+                    "offsetV":None
+                },
+                "eventRadius":None,
+                "description":{"choiceID":2,"description":"前方拥堵"},
+                "timeDetails":{"startTime":90355,"endTime":None,"endTimeConfidence":None},
+                "priority":1,
+                "referencePaths":[{
+                    "activePath":[
+                        {"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat+5000,"lng":far_lon+5000,"long":far_lon+5000}},"offsetV":{"choiceID":7,"elevation":0}},
+                        {"offsetLL":{"choiceID":7,"position_LatLon":{"lat":far_lat,"lng":far_lon,"long":far_lon}},"offsetV":{"choiceID":7,"elevation":0}}
+                    ],
+                    "pathRadius":100
+                }],
+                "referenceLinks":None,
+                "eventConfidence":None,
+                "duration":14400,
+                "alertStatus":1
+            }]
+        }
+    }
+    cli=MQTTClient(RSU_MQTT_HOST,RSU_MQTT_PORT,client_id="neutralize_rte")
+    cli.connect()
+    cli.publish(rsu_topic("rte","983966a4-59a2-4431-bd62-965d7ec8ee14"),dump_json(rte))
+    time.sleep(1.0)
     cli.close()
-    print("[RSI] previous RTE/RTS moved away from current test route")
-
+    print("[RSI] old JAM/HLW RTE overwritten to far-away coordinates")
 def run_rsm(json_path,reqid,ego_points,ego_speed_kmh,duration_s,update_target,repeat=1):
     neutralize_previous_rsi()
     base=load_json(json_path); topic=rsu_topic("rsm",reqid)
