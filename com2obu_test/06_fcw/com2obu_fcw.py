@@ -10,6 +10,8 @@ import argparse
 import math
 import sys
 import time
+from datetime import datetime
+from fcw_monitor import OBUCapture
 from copy import deepcopy
 from pathlib import Path
 
@@ -25,6 +27,7 @@ JSON_FILE = Path(__file__).with_name("fcw.json")
 DEFAULT_EGO_KMH = 50.0
 SAFE_GAP_M = 8.0
 BRAKING_START_GAP_M = 28.0
+RISK_BRAKE_GAP_M = 14.0
 PAUSE_S = 3.0
 
 
@@ -35,29 +38,29 @@ def advance(origin, heading, meters):
             (111195.0 * math.cos(math.radians(origin[0]))))
 
 
-def test_one(obu, rsu, template, heading, initial_gap, lead_kmh, ego_kmh, number):
+def test_one(obu, rsu, template, heading, initial_gap, lead_kmh, ego_kmh, number, mode):
     dt = 1.0 / SEND_HZ
     lead_ms = lead_kmh / 3.6
     ego_ms = ego_kmh / 3.6
     relative = ego_ms - lead_ms
     if relative <= 0:
         raise ValueError("Ego must be faster than lead vehicle")
-    # Brake gradually before reaching a minimum safe gap.
-    available = max(1.0, BRAKING_START_GAP_M - SAFE_GAP_M)
+    brake_gap = BRAKING_START_GAP_M if mode == "normal" else RISK_BRAKE_GAP_M
+    available = max(1.0, brake_gap - SAFE_GAP_M)
     brake_decel = max(2.0, relative * relative / (2.0 * available))
-    duration = min(18.0, max(8.0, (initial_gap - BRAKING_START_GAP_M) / relative + 5.0))
+    duration = min(18.0, max(8.0, (initial_gap - brake_gap) / relative + 5.0))
     frames = int(math.ceil(duration * SEND_HZ))
     ego_s = 0.0
     lead_s = initial_gap
     current_ego_ms = ego_ms
     print(f"\n[CASE {number}] gap={initial_gap:.0f}m lead={lead_kmh:.0f}km/h "
-          f"ego={ego_kmh:.0f}km/h heading={heading:.2f}deg "
+          f"ego={ego_kmh:.0f}km/h mode={mode} heading={heading:.2f}deg "
           f"initial TTC={initial_gap/relative:.2f}s")
     started = time.monotonic()
     for i in range(frames):
         t = i * dt
         gap = lead_s - ego_s
-        if gap <= BRAKING_START_GAP_M:
+        if gap <= brake_gap:
             current_ego_ms = max(lead_ms, current_ego_ms - brake_decel * dt)
         else:
             current_ego_ms = ego_ms
@@ -102,6 +105,8 @@ def main():
     parser.add_argument("--lead-speed", type=float, choices=[0.0, 10.0, 20.0], default=10.0)
     parser.add_argument("--ego-speed", type=float, default=DEFAULT_EGO_KMH)
     parser.add_argument("--sweep", action="store_true", help="test all 9 combinations")
+    parser.add_argument("--mode", choices=["normal", "risk"], default="normal")
+    parser.add_argument("--log-dir", default="fcw_logs", help="directory for captured MQTT JSONL")
     args = parser.parse_args()
     if args.ego_speed <= max(20.0 if args.sweep else args.lead_speed, 0):
         parser.error("ego speed must exceed lead speed")
@@ -114,13 +119,17 @@ def main():
     print("[INFO] Stop other RSM/com2obu publishers. Expect fFCW/event_sort=0 if supported.")
     obu = MQTTClient(OBU_HOST, OBU_PORT, OBU_USER, OBU_PASSWORD, "fcw_ego")
     rsu = MQTTClient(RSU_MQTT_HOST, RSU_MQTT_PORT, client_id="fcw_lead")
+    capture_path = Path(args.log_dir) / ("fcw_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".jsonl")
+    capture = OBUCapture(capture_path)
+    capture.start()
+    print(f"[CAPTURE] local + event2hmi -> {capture_path}")
     obu.connect()
     last = None
     try:
         rsu.connect()
         try:
             for n, (gap, lead_speed) in enumerate(combos, 1):
-                last = test_one(obu, rsu, template, heading, gap, lead_speed, args.ego_speed, n)
+                last = test_one(obu, rsu, template, heading, gap, lead_speed, args.ego_speed, n, args.mode)
         except KeyboardInterrupt:
             print("\n[STOP] interrupted")
         finally:
@@ -133,6 +142,7 @@ def main():
             rsu.close()
     finally:
         obu.close()
+        capture.close()
 
 
 if __name__ == "__main__":
