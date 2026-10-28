@@ -47,6 +47,7 @@ def run():
     ego_ms = EGO_SPEED_KMH / 3.6
     lead_ms = LEAD_SPEED_KMH / 3.6
     closing_ms = ego_ms - lead_ms
+    stop_time = (INITIAL_GAP_M - MIN_GAP_M) / closing_ms
     print("[FCW] dynamic vehicle following: 10Hz RSM + com2obu")
     print(f"[EGO] {EGO_SPEED_KMH}km/h, [LEAD] {LEAD_SPEED_KMH}km/h, heading={heading:.2f}deg")
     print(f"[GAP] initial={INITIAL_GAP_M}m min={MIN_GAP_M}m initial TTC={(INITIAL_GAP_M-MIN_GAP_M)/closing_ms:.2f}s")
@@ -66,9 +67,9 @@ def run():
                 for i in range(int(DURATION_S * SEND_HZ)):
                     elapsed = i * period
                     lead_progress = INITIAL_GAP_M + lead_ms * elapsed
-                    ego_progress = min(ego_ms * elapsed, lead_progress - MIN_GAP_M)
+                    ego_progress = min(ego_ms * elapsed, ego_ms * stop_time)
                     gap = lead_progress - ego_progress
-                    ego_speed = EGO_SPEED_KMH if gap > MIN_GAP_M + ego_ms * period else 0.0
+                    ego_speed = EGO_SPEED_KMH if elapsed < stop_time else 0.0
                     ego = advance(ORIGIN, heading, ego_progress)
                     lead = advance(ORIGIN, heading, lead_progress)
                     last_ego = ego
