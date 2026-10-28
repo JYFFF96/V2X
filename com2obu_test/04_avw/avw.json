@@ -1,1 +1,44 @@
-{"type":"RSM","value":{"category":"RSM","msgCnt":0,"id":"dc-rsm-static-test","refPos":{"lat":304624965,"long":1141224628},"participants":[{"ptcType":1,"ptcId":1,"source":3,"id":"AVW_TARGET","secMark":500,"pos":{"offsetLL":{"choiceID":7,"position_LatLon":{"lat":304631546,"long":1141233891}},"offsetV":{"choiceID":7,"elevation":121},"posConfidence":{"pos":15}},"speed":0,"heading":19300,"size":{"width":200,"length":450,"height":150}}]}}
+{
+  "type": "RSM",
+  "value": {
+    "category": "RSM",
+    "msgCnt": 0,
+    "id": "dc-rsm-static-test",
+    "refPos": {
+      "lat": 304624965,
+      "long": 1141224628
+    },
+    "participants": [
+      {
+        "ptcType": 1,
+        "ptcId": 1,
+        "source": 3,
+        "id": "AVW_TARGET",
+        "secMark": 500,
+        "pos": {
+          "offsetLL": {
+            "choiceID": 7,
+            "position_LatLon": {
+              "lat": 304631546,
+              "long": 1141233891
+            }
+          },
+          "offsetV": {
+            "choiceID": 7,
+            "elevation": 121
+          }
+        },
+        "speed": 0,
+        "heading": 19300,
+        "size": {
+          "width": 200,
+          "length": 450,
+          "height": 30
+        },
+        "posConfidence": {
+          "pos": 15
+        }
+      }
+    ]
+  }
+}
