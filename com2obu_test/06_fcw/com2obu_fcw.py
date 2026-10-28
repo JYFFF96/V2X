@@ -11,11 +11,11 @@ import math
 import sys
 import time
 from datetime import datetime
-from fcw_monitor import OBUCapture
 from copy import deepcopy
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from fcw_monitor import OBUCapture
 from common import (MQTTClient, OBU_HOST, OBU_PORT, OBU_USER, OBU_PASSWORD,
     RSU_MQTT_HOST, RSU_MQTT_PORT, SEND_HZ, bearing_deg, distance_m,
     com2obu_payload, dump_json, load_json, rsu_topic, set_participant)
