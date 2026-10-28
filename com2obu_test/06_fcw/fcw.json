@@ -19,8 +19,8 @@
           "offsetLL": {
             "choiceID": 7,
             "position_LatLon": {
-              "lat": 304632836,
-              "long": 1141236637
+              "lat": 304626508,
+              "long": 1141225415
             }
           },
           "offsetV": {
@@ -28,8 +28,8 @@
             "elevation": 121
           }
         },
-        "speed": 139,
-        "heading": 19300,
+        "speed": 208,
+        "heading": 18579,
         "size": {
           "width": 200,
           "length": 450,
