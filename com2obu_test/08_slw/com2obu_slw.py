@@ -97,13 +97,13 @@ class RSUAckMonitor:
             try:
                 with socket.create_connection((RSU_MQTT_HOST,RSU_MQTT_PORT),timeout=5) as sock:
                     sock.settimeout(5.0)
-                    vh=mqtt_str("MQTT")+b"\\x04\\x02"+struct.pack("!H",60)
+                    vh=mqtt_str("MQTT")+b"\x04\x02"+struct.pack("!H",60)
                     payload=mqtt_str("slw_rsu_ack_monitor")
-                    sock.sendall(b"\\x10"+mqtt_len(len(vh)+len(payload))+vh+payload)
+                    sock.sendall(b"\x10"+mqtt_len(len(vh)+len(payload))+vh+payload)
                     kind,body=self.packet(sock)
                     if kind>>4!=2 or len(body)<2 or body[1]!=0:raise RuntimeError("RSU broker CONNACK failed")
-                    sub=struct.pack("!H",1)+mqtt_str(ACK_TOPIC)+b"\\x00"
-                    sock.sendall(b"\\x82"+mqtt_len(len(sub))+sub)
+                    sub=struct.pack("!H",1)+mqtt_str(ACK_TOPIC)+b"\x00"
+                    sock.sendall(b"\x82"+mqtt_len(len(sub))+sub)
                     self.ready.set()
                     last_ping=time.monotonic()
                     while not self.stop.is_set():
@@ -127,7 +127,7 @@ class RSUAckMonitor:
                             out.flush()
                             if matched:print("[RSU ACK]",raw,flush=True)
                         if time.monotonic()-last_ping>20:
-                            sock.sendall(b"\\xc0\\x00");last_ping=time.monotonic()
+                            sock.sendall(b"\xc0\x00");last_ping=time.monotonic()
             except (OSError,RuntimeError,ValueError,ConnectionError) as exc:
                 print("[RSU ACK] monitor unavailable:",exc,flush=True)
                 self.ready.set()
