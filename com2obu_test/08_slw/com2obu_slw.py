@@ -63,6 +63,7 @@ class RSUAckMonitor:
         self.thread=threading.Thread(target=self.run,daemon=True)
         self.responses=0
         self.matched=0
+        self.ready=threading.Event()
 
     @staticmethod
     def recv_exact(sock,n):
@@ -93,7 +94,7 @@ class RSUAckMonitor:
         with self.path.open("w",encoding="utf-8") as out:
             try:
                 with socket.create_connection((RSU_MQTT_HOST,RSU_MQTT_PORT),timeout=5) as sock:
-                    sock.settimeout(1.0)
+                    sock.settimeout(5.0)
                     vh=mqtt_str("MQTT")+b"\\x04\\x02"+struct.pack("!H",60)
                     payload=mqtt_str("slw_rsu_ack_monitor")
                     sock.sendall(b"\\x10"+mqtt_len(len(vh)+len(payload))+vh+payload)
@@ -101,6 +102,7 @@ class RSUAckMonitor:
                     if kind>>4!=2 or len(body)<2 or body[1]!=0:raise RuntimeError("RSU broker CONNACK failed")
                     sub=struct.pack("!H",1)+mqtt_str(ACK_TOPIC)+b"\\x00"
                     sock.sendall(b"\\x82"+mqtt_len(len(sub))+sub)
+                    self.ready.set()
                     last_ping=time.monotonic()
                     while not self.stop.is_set():
                         try:
@@ -125,7 +127,8 @@ class RSUAckMonitor:
                         if time.monotonic()-last_ping>20:
                             sock.sendall(b"\\xc0\\x00");last_ping=time.monotonic()
             except (OSError,RuntimeError,ValueError,ConnectionError) as exc:
-                print("[RSU ACK] monitor error:",exc,flush=True)
+                print("[RSU ACK] monitor unavailable:",exc,flush=True)
+                self.ready.set()
 
     def close(self):
         self.stop.set()
@@ -154,6 +157,7 @@ def main():
     logpath=Path(args.log_dir)/("slw_"+datetime.now().strftime("%Y%m%d_%H%M%S")+".jsonl")
     capture=OBUCapture(logpath);capture.start()
     ack=RSUAckMonitor(logpath.with_name(logpath.stem+"_rsu_ack.jsonl"));ack.start()
+    ack.ready.wait(timeout=2.0)
     sent_log=logpath.with_name(logpath.stem+"_map_sent.jsonl")
     obu=MQTTClient(OBU_HOST,OBU_PORT,OBU_USER,OBU_PASSWORD,"slw_ego")
     rsu=MQTTClient(RSU_MQTT_HOST,RSU_MQTT_PORT,client_id="slw_map")
