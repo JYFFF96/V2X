@@ -25,7 +25,7 @@ REQID="983966a4-59a2-4431-bd62-965d7ec8ee29"
 ACK_TOPIC="command///res/+/200"
 
 
-def choose_lane(map_message, link_index=2, lane_id=4):
+def choose_lane(map_message, link_index=2, lane_id=3):
     nodes=map_message["value"]["nodes"]
     links=nodes[0]["inLinks"]
     if link_index>=len(links):raise ValueError("Invalid link index")
@@ -37,6 +37,8 @@ def choose_lane(map_message, link_index=2, lane_id=4):
         pos=p["posOffset"]["offsetLL"]["position_LatLon"]
         points.append((pos["lat"]/1e7,pos["long"]/1e7))
     if len(points)<2:raise ValueError("MAP lane needs >=2 points")
+    if not lane.get("maneuvers",{}).get("maneuverStraightAllowed"):
+        print("[WARN] Selected lane does not advertise straight movement")
     return lane,points
 
 
@@ -142,7 +144,7 @@ def main():
     parser.add_argument("--limit",type=float,default=40.0,help="test lane speed limit in km/h")
     parser.add_argument("--speed",type=float,default=60.0,help="OBU speed km/h; 30 for below-limit, 60 for over-limit")
     parser.add_argument("--link-index",type=int,default=2,help="zero-based inLinks index of first node")
-    parser.add_argument("--lane-id",type=int,default=4)
+    parser.add_argument("--lane-id",type=int,default=3)
     parser.add_argument("--loops",type=int,default=2)
     parser.add_argument("--log-dir",default="slw_logs")
     parser.add_argument("--map-interval",type=float,default=1.0,help="MAP publish interval in seconds")
@@ -161,7 +163,8 @@ def main():
     sent_log=logpath.with_name(logpath.stem+"_map_sent.jsonl")
     obu=MQTTClient(OBU_HOST,OBU_PORT,OBU_USER,OBU_PASSWORD,"slw_ego")
     rsu=MQTTClient(RSU_MQTT_HOST,RSU_MQTT_PORT,client_id="slw_map")
-    print(f"[SLW] lane={args.lane_id} link={args.link_index} points={len(points)} frames={len(frames)}")
+    print(f"[SLW] lane={args.lane_id} link={args.link_index} points={len(points)} frames={len(frames)} straight={lane.get('maneuvers',{}).get('maneuverStraightAllowed',False)}")
+    print("[SLW] SpeedLimitType 5 = vehicleMaxSpeed (general vehicle maximum); units 0.02m/s")
     print(f"[SLW] MAP lanes={total_lanes} limit_entries_updated={changed}")
     print(f"[SLW] limit={args.limit}km/h raw={speed_raw(args.limit)} ego={args.speed}km/h")
     print(f"[LOG] {logpath}")
