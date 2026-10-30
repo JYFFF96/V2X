@@ -175,11 +175,24 @@ def main():
             publish_map()
             next_map=time.monotonic()+args.map_interval
             time.sleep(2)
-        except KeyboardInterrupt:
+            for loop in range(args.loops):
+                started=time.monotonic()
+                print(f"[LOOP] {loop+1}/{args.loops}")
+                for i,(lat,lon,hd) in enumerate(frames):
+                    if time.monotonic()>=next_map:
+                        publish_map()
+                        next_map=time.monotonic()+args.map_interval
+                    obu.publish("com2obu",dump_json(com2obu_payload(lat,lon,hd,args.speed)))
+                    if i%int(SEND_HZ)==0:
+                        print(f"[t={i/SEND_HZ:5.1f}s] lat={lat:.7f} lon={lon:.7f} heading={hd:.1f}")
+                    wait=started+(i+1)/SEND_HZ-time.monotonic()
+                    if wait>0:time.sleep(wait)
+                time.sleep(2)
+    except KeyboardInterrupt:
         print("[STOP] interrupted")
     finally:
         obu.close();rsu.close();capture.close();ack.close()
-        print("[NOTE] MQTT 200 confirms RSU command handling, not necessarily successful MAP air transmission or OBU map matching.")
+        print("[NOTE] RSU MQTT 200 does not prove MAP delivery to OBU.")
 
 
 if __name__=="__main__":
